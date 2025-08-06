@@ -9,6 +9,26 @@
 <body>
     <h1>오목</h1>
     <canvas id="omok-board" width="600" height="600"></canvas>
+    
+    <!-- 승패 결과 모달 -->
+    <div id="result-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="result-title">게임 결과</h2>
+            </div>
+            <div class="modal-body">
+                <p id="result-message"></p>
+                <div class="winner-animation">
+                    <div class="trophy">🏆</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="new-game-btn" class="btn btn-primary">새 게임</button>
+                <button id="close-modal-btn" class="btn btn-secondary">닫기</button>
+            </div>
+        </div>
+    </div>
+    
     <script src="js/script.js"></script>
 </body>
 </html>
