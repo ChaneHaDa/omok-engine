@@ -1,5 +1,6 @@
 from fastapi import FastAPI, WebSocket
 from game import OmokGame
+import json
 
 app = FastAPI()
 game = OmokGame()
@@ -8,7 +9,53 @@ game = OmokGame()
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     while True:
-        data = await websocket.receive_json()
-        x, y = data['x'], data['y']
-        message = game.place_stone(x, y)
-        await websocket.send_json({"message": message, "board": game.board})
+        try:
+            data = await websocket.receive_json()
+            
+            # 새 게임 시작 액션 처리
+            if 'action' in data and data['action'] == 'new_game':
+                game.__init__()  # 게임 초기화
+                await websocket.send_json({
+                    "message": "New game started",
+                    "board": game.board
+                })
+                continue
+            
+            # 필수 키 확인
+            if 'x' not in data or 'y' not in data:
+                await websocket.send_json({
+                    "error": "Missing required keys: 'x' and 'y'",
+                    "board": game.board
+                })
+                continue
+            
+            x, y = data['x'], data['y']
+            
+            # 좌표 유효성 검사
+            if not isinstance(x, int) or not isinstance(y, int):
+                await websocket.send_json({
+                    "error": "Coordinates must be integers",
+                    "board": game.board
+                })
+                continue
+                
+            if x < 0 or x >= 19 or y < 0 or y >= 19:
+                await websocket.send_json({
+                    "error": "Coordinates out of range (0-18)",
+                    "board": game.board
+                })
+                continue
+            
+            message = game.place_stone(x, y)
+            await websocket.send_json({"message": message, "board": game.board})
+            
+        except json.JSONDecodeError:
+            await websocket.send_json({
+                "error": "Invalid JSON format",
+                "board": game.board
+            })
+        except Exception as e:
+            await websocket.send_json({
+                "error": f"Server error: {str(e)}",
+                "board": game.board
+            })
