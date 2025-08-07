@@ -10,10 +10,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultMessage = document.getElementById('result-message');
     const newGameBtn = document.getElementById('new-game-btn');
     const closeModalBtn = document.getElementById('close-modal-btn');
+    
+    // 게임 정보 요소들
+    const currentTurnElement = document.getElementById('current-turn');
+    const moveCountElement = document.getElementById('move-count');
 
     const BOARD_SIZE = 19;
     const CELL_SIZE = canvas.width / (BOARD_SIZE + 1);
     const PADDING = CELL_SIZE;
+    
+    // 게임 상태 추적
+    let gameEnded = false;
+    let currentBoard = [];
+    let currentMoveNumbers = [];
 
     function drawBoard() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -31,9 +40,23 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.lineTo(canvas.width - PADDING, PADDING + i * CELL_SIZE);
             ctx.stroke();
         }
+        
+        // 저장된 보드 상태가 있으면 다시 그리기
+        if (currentBoard.length > 0) {
+            console.log('Drawing board with gameEnded:', gameEnded);
+            for (let y = 0; y < currentBoard.length; y++) {
+                for (let x = 0; x < currentBoard[y].length; x++) {
+                    if (currentBoard[y][x]) {
+                        const moveNumber = currentMoveNumbers[y] ? currentMoveNumbers[y][x] : null;
+                        console.log(`Drawing stone at (${x}, ${y}): ${currentBoard[y][x]}, moveNumber: ${moveNumber}, showNumbers: ${gameEnded}`);
+                        drawStone(x, y, currentBoard[y][x], moveNumber, gameEnded);
+                    }
+                }
+            }
+        }
     }
 
-    function drawStone(x, y, color) {
+    function drawStone(x, y, color, moveNumber = null, showNumbers = false) {
         const stoneRadius = CELL_SIZE / 2.2;
         ctx.beginPath();
         ctx.arc(
@@ -45,6 +68,21 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         ctx.fillStyle = color;
         ctx.fill();
+        
+        // 게임이 끝났을 때만 차례 번호 표시
+        console.log(`drawStone called: x=${x}, y=${y}, color=${color}, moveNumber=${moveNumber}, showNumbers=${showNumbers}`);
+        if (showNumbers && moveNumber && moveNumber > 0) {
+            console.log(`Drawing number ${moveNumber} on stone at (${x}, ${y})`);
+            ctx.fillStyle = color === 'black' ? 'white' : 'black';
+            ctx.font = `${Math.max(10, CELL_SIZE / 4)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(
+                moveNumber.toString(),
+                PADDING + x * CELL_SIZE,
+                PADDING + y * CELL_SIZE
+            );
+        }
     }
 
     // 모달 표시 함수
@@ -52,10 +90,10 @@ document.addEventListener('DOMContentLoaded', () => {
         resultMessage.textContent = message;
         
         // 승자에 따라 제목과 스타일 변경
-        if (message.includes('Black wins')) {
+        if (message.includes('black wins')) {
             resultTitle.textContent = '흑돌 승리! 🎉';
             resultTitle.style.color = '#000';
-        } else if (message.includes('White wins')) {
+        } else if (message.includes('white wins')) {
             resultTitle.textContent = '백돌 승리! 🎉';
             resultTitle.style.color = '#fff';
         } else {
@@ -77,6 +115,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 새 게임 시작 함수
     function startNewGame() {
         hideResultModal();
+        gameEnded = false;
+        currentBoard = [];
+        currentMoveNumbers = [];
         drawBoard();
         // 서버에 새 게임 요청을 보낼 수 있습니다
         socket.send(JSON.stringify({ action: 'new_game' }));
@@ -102,17 +143,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        drawBoard();
-        for (let y = 0; y < data.board.length; y++) {
-            for (let x = 0; x < data.board[y].length; x++) {
-                if (data.board[y][x]) {
-                    drawStone(x, y, data.board[y][x]);
-                }
-            }
-        }
+        
+        // 디버깅용 로그
+        console.log('Received data:', data);
+        console.log('Game ended:', gameEnded);
+        console.log('Move numbers:', data.move_numbers);
+        
+        // 보드 상태 저장
+        currentBoard = data.board;
+        currentMoveNumbers = data.move_numbers || [];
+        
+        // 게임이 끝났는지 확인
         if (data.message.includes('wins')) {
-            // alert 대신 모달 사용
+            gameEnded = true;
+            console.log('Game ended! Showing numbers...');
             showResultModal(data.message);
+            // 게임이 끝났을 때는 잠시 후에 다시 그리기 (모달이 표시된 후)
+            setTimeout(() => {
+                console.log('Redrawing board after game end...');
+                drawBoard();
+            }, 100);
+        } else {
+            drawBoard();
+        }
+        
+        // 게임 정보 업데이트
+        if (data.current_turn) {
+            const turnName = data.current_turn === 'black' ? '흑돌' : '백돌';
+            currentTurnElement.textContent = `현재 차례: ${turnName}`;
+        }
+        if (data.move_count !== undefined) {
+            moveCountElement.textContent = `총 수: ${data.move_count}`;
         }
     };
 

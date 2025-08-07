@@ -18,6 +18,32 @@ h1 {
     font-weight: 300;
 }
 
+#game-info {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 15px 25px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    text-align: center;
+}
+
+#game-info p {
+    margin: 5px 0;
+    font-size: 1.1em;
+    font-weight: 500;
+    color: #333;
+}
+
+#current-turn {
+    color: #667eea;
+    font-weight: 600;
+}
+
+#move-count {
+    color: #764ba2;
+    font-weight: 600;
+}
+
 canvas {
     background-color: #e3b266;
     border: 3px solid #8B4513;
