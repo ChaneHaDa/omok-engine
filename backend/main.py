@@ -17,7 +17,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 game.__init__()  # 게임 초기화
                 await websocket.send_json({
                     "message": "New game started",
-                    "board": game.board
+                    "board": game.board,
+                    "move_numbers": game.move_numbers,
+                    "current_turn": game.current_turn,
+                    "move_count": game.move_count
                 })
                 continue
             
@@ -25,7 +28,10 @@ async def websocket_endpoint(websocket: WebSocket):
             if 'x' not in data or 'y' not in data:
                 await websocket.send_json({
                     "error": "Missing required keys: 'x' and 'y'",
-                    "board": game.board
+                    "board": game.board,
+                    "move_numbers": game.move_numbers,
+                    "current_turn": game.current_turn,
+                    "move_count": game.move_count
                 })
                 continue
             
@@ -35,27 +41,45 @@ async def websocket_endpoint(websocket: WebSocket):
             if not isinstance(x, int) or not isinstance(y, int):
                 await websocket.send_json({
                     "error": "Coordinates must be integers",
-                    "board": game.board
+                    "board": game.board,
+                    "move_numbers": game.move_numbers,
+                    "current_turn": game.current_turn,
+                    "move_count": game.move_count
                 })
                 continue
                 
             if x < 0 or x >= 19 or y < 0 or y >= 19:
                 await websocket.send_json({
                     "error": "Coordinates out of range (0-18)",
-                    "board": game.board
+                    "board": game.board,
+                    "move_numbers": game.move_numbers,
+                    "current_turn": game.current_turn,
+                    "move_count": game.move_count
                 })
                 continue
             
             message = game.place_stone(x, y)
-            await websocket.send_json({"message": message, "board": game.board})
+            await websocket.send_json({
+                "message": message, 
+                "board": game.board,
+                "move_numbers": game.move_numbers,
+                "current_turn": game.current_turn,
+                "move_count": game.move_count
+            })
             
         except json.JSONDecodeError:
             await websocket.send_json({
                 "error": "Invalid JSON format",
-                "board": game.board
+                "board": game.board,
+                "move_numbers": game.move_numbers,
+                "current_turn": game.current_turn,
+                "move_count": game.move_count
             })
         except Exception as e:
             await websocket.send_json({
                 "error": f"Server error: {str(e)}",
-                "board": game.board
+                "board": game.board,
+                "move_numbers": game.move_numbers,
+                "current_turn": game.current_turn,
+                "move_count": game.move_count
             })
