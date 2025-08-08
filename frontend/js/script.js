@@ -21,6 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 게임 상태 추적
     let gameEnded = false;
+    let playerColor = null; // 'black' or 'white'
+    let currentTurn = null;
     let currentBoard = [];
     let currentMoveNumbers = [];
 
@@ -118,6 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
         gameEnded = false;
         currentBoard = [];
         currentMoveNumbers = [];
+        playerColor = null;
+        currentTurn = null;
         drawBoard();
         // 서버에 새 게임 요청을 보낼 수 있습니다
         socket.send(JSON.stringify({ action: 'new_game' }));
@@ -152,6 +156,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // 보드 상태 저장
         currentBoard = data.board;
         currentMoveNumbers = data.move_numbers || [];
+
+        // 플레이어 색상 할당 (새 게임 시작 시 제공)
+        if (data.player_color) {
+            playerColor = data.player_color;
+            console.log('Assigned player color:', playerColor);
+        }
         
         // 게임이 끝났는지 확인
         if (data.message.includes('wins')) {
@@ -169,6 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 게임 정보 업데이트
         if (data.current_turn) {
+            currentTurn = data.current_turn;
             const turnName = data.current_turn === 'black' ? '흑돌' : '백돌';
             currentTurnElement.textContent = `현재 차례: ${turnName}`;
         }
@@ -178,6 +189,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     canvas.addEventListener('click', (event) => {
+        if (gameEnded) {
+            console.log('Game ended; click ignored.');
+            return;
+        }
+        if (playerColor && currentTurn && currentTurn !== playerColor) {
+            console.log('Not your turn; click ignored.');
+            return;
+        }
         const rect = canvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
