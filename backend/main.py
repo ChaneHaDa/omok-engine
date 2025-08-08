@@ -4,13 +4,14 @@ import json
 import random
 
 app = FastAPI()
-game = OmokGame()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     # Assign player's color per-connection on new game
     player_color = None  # 'black' or 'white'
+    # Create a per-connection game state (no shared board between clients)
+    game = OmokGame()
 
     async def bot_move():
         # Choose a random empty cell and place the bot's stone
@@ -40,8 +41,8 @@ async def websocket_endpoint(websocket: WebSocket):
             
             # 새 게임 시작 액션 처리
             if 'action' in data and data['action'] == 'new_game':
-                # Initialize game and randomly assign player color
-                game.__init__()
+                # Initialize per-connection game and randomly assign player color
+                game = OmokGame()
                 player_color = random.choice(['black', 'white'])
                 # Inform client of assignment and current board
                 await websocket.send_json({
