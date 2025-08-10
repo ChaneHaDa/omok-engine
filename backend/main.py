@@ -112,8 +112,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 "move_count": game.move_count
             })
 
-            # If player didn't win, trigger bot's move
-            if 'wins' not in message:
+            # 플레이어가 정상적으로 돌을 둔 경우에만(승리 제외) 봇이 응수
+            if message == "Stone placed":
                 await bot_move()
             
         except json.JSONDecodeError:

@@ -205,6 +205,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const gridY = Math.round((y - PADDING) / CELL_SIZE);
 
         if (gridX >= 0 && gridX < BOARD_SIZE && gridY >= 0 && gridY < BOARD_SIZE) {
+            // 이미 돌이 놓인 자리 클릭 무시 (클라이언트 측 예방)
+            if (currentBoard && currentBoard.length && currentBoard[gridY] && currentBoard[gridY][gridX]) {
+                console.log('Cell occupied; click ignored.');
+                return;
+            }
             socket.send(JSON.stringify({ x: gridX, y: gridY }));
         }
     });
