@@ -25,6 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentTurn = null;
     let currentBoard = [];
     let currentMoveNumbers = [];
+    let lastMove = null;
+    let hoverPosition = null;
 
     function drawBoard() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -50,26 +52,65 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (let x = 0; x < currentBoard[y].length; x++) {
                     if (currentBoard[y][x]) {
                         const moveNumber = currentMoveNumbers[y] ? currentMoveNumbers[y][x] : null;
+                        const isLastMove = lastMove && lastMove.x === x && lastMove.y === y;
                         console.log(`Drawing stone at (${x}, ${y}): ${currentBoard[y][x]}, moveNumber: ${moveNumber}, showNumbers: ${gameEnded}`);
-                        drawStone(x, y, currentBoard[y][x], moveNumber, gameEnded);
+                        drawStone(x, y, currentBoard[y][x], moveNumber, gameEnded, isLastMove);
                     }
                 }
             }
         }
+        
+        // 호버 프리뷰 그리기
+        if (hoverPosition && !gameEnded && playerColor && currentTurn === playerColor) {
+            drawHoverPreview(hoverPosition.x, hoverPosition.y);
+        }
+    }
+    
+    function drawHoverPreview(x, y) {
+        // 이미 돌이 있는 곳은 프리뷰 안함
+        if (currentBoard && currentBoard.length && currentBoard[y] && currentBoard[y][x]) {
+            return;
+        }
+        
+        const stoneRadius = CELL_SIZE / 2.2;
+        const centerX = PADDING + x * CELL_SIZE;
+        const centerY = PADDING + y * CELL_SIZE;
+        
+        // 투명한 돌 그리기
+        ctx.globalAlpha = 0.4;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, stoneRadius, 0, Math.PI * 2);
+        ctx.fillStyle = playerColor;
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
     }
 
-    function drawStone(x, y, color, moveNumber = null, showNumbers = false) {
+    function drawStone(x, y, color, moveNumber = null, showNumbers = false, isLastMove = false) {
         const stoneRadius = CELL_SIZE / 2.2;
+        const centerX = PADDING + x * CELL_SIZE;
+        const centerY = PADDING + y * CELL_SIZE;
+        
+        // 마지막 수 하이라이트
+        if (isLastMove && !showNumbers) {
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, stoneRadius + 4, 0, Math.PI * 2);
+            ctx.strokeStyle = color === 'black' ? '#ff6b6b' : '#4dabf7';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+        
+        // 돌 그리기
         ctx.beginPath();
-        ctx.arc(
-            PADDING + x * CELL_SIZE,
-            PADDING + y * CELL_SIZE,
-            stoneRadius,
-            0,
-            Math.PI * 2
-        );
+        ctx.arc(centerX, centerY, stoneRadius, 0, Math.PI * 2);
         ctx.fillStyle = color;
         ctx.fill();
+        
+        // 돌 테두리
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, stoneRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = color === 'black' ? '#333' : '#ccc';
+        ctx.lineWidth = 1;
+        ctx.stroke();
         
         // 게임이 끝났을 때만 차례 번호 표시
         console.log(`drawStone called: x=${x}, y=${y}, color=${color}, moveNumber=${moveNumber}, showNumbers=${showNumbers}`);
@@ -79,11 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.font = `${Math.max(10, CELL_SIZE / 4)}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(
-                moveNumber.toString(),
-                PADDING + x * CELL_SIZE,
-                PADDING + y * CELL_SIZE
-            );
+            ctx.fillText(moveNumber.toString(), centerX, centerY);
         }
     }
 
@@ -122,6 +159,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentMoveNumbers = [];
         playerColor = null;
         currentTurn = null;
+        lastMove = null;
+        hoverPosition = null;
         drawBoard();
         // 서버에 새 게임 요청을 보낼 수 있습니다
         socket.send(JSON.stringify({ action: 'new_game' }));
@@ -157,6 +196,11 @@ document.addEventListener('DOMContentLoaded', () => {
         currentBoard = data.board;
         currentMoveNumbers = data.move_numbers || [];
 
+        // 마지막 수 추적 (봇 수인 경우)
+        if (data.bot_move) {
+            lastMove = { x: data.bot_move.x, y: data.bot_move.y };
+        }
+
         // 플레이어 색상 할당 (새 게임 시작 시 제공)
         if (data.player_color) {
             playerColor = data.player_color;
@@ -181,10 +225,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.current_turn) {
             currentTurn = data.current_turn;
             const turnName = data.current_turn === 'black' ? '흑돌' : '백돌';
-            currentTurnElement.textContent = `현재 차례: ${turnName}`;
+            const stoneClass = data.current_turn === 'black' ? 'black' : 'white';
+            const valueSpan = currentTurnElement.querySelector('.value');
+            if (valueSpan) {
+                valueSpan.innerHTML = `<span class="stone-icon ${stoneClass}"></span>${turnName}`;
+            }
         }
         if (data.move_count !== undefined) {
-            moveCountElement.textContent = `총 수: ${data.move_count}`;
+            const valueSpan = moveCountElement.querySelector('.value');
+            if (valueSpan) {
+                valueSpan.textContent = data.move_count;
+            }
         }
     };
 
@@ -210,8 +261,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('Cell occupied; click ignored.');
                 return;
             }
+            // 플레이어 수를 마지막 수로 설정
+            lastMove = { x: gridX, y: gridY };
             socket.send(JSON.stringify({ x: gridX, y: gridY }));
         }
+    });
+    
+    // 마우스 호버 이벤트
+    canvas.addEventListener('mousemove', (event) => {
+        if (gameEnded || !playerColor || currentTurn !== playerColor) {
+            hoverPosition = null;
+            drawBoard();
+            return;
+        }
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        const gridX = Math.round((x - PADDING) / CELL_SIZE);
+        const gridY = Math.round((y - PADDING) / CELL_SIZE);
+
+        if (gridX >= 0 && gridX < BOARD_SIZE && gridY >= 0 && gridY < BOARD_SIZE) {
+            hoverPosition = { x: gridX, y: gridY };
+        } else {
+            hoverPosition = null;
+        }
+        drawBoard();
+    });
+    
+    // 마우스가 캔버스를 벗어날 때 호버 제거
+    canvas.addEventListener('mouseleave', () => {
+        hoverPosition = null;
+        drawBoard();
     });
 
     drawBoard();

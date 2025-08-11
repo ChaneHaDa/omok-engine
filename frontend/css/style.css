@@ -20,43 +20,132 @@ h1 {
 }
 
 #game-info {
-    background: rgba(245, 245, 245, 0.9);
-    padding: 15px 25px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    text-align: center;
-    border: 1px solid #e0e0e0;
+    background: linear-gradient(135deg, #f8fafc, #ffffff);
+    padding: 20px 40px;
+    border-radius: 16px;
+    margin-bottom: 25px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    backdrop-filter: blur(10px);
+    min-width: 600px;
+    max-width: 800px;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+#game-info::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #667eea, #764ba2, #667eea);
+    background-size: 200% 100%;
+    animation: shimmer 3s ease-in-out infinite;
 }
 
 #game-info p {
-    margin: 5px 0;
-    font-size: 1.1em;
-    font-weight: 500;
-    color: #333;
+    margin: 0;
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #334155;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    position: relative;
 }
 
-#current-turn {
-    color: #667eea;
+#game-info p span.label {
+    font-size: 1em;
     font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-#move-count {
-    color: #764ba2;
-    font-weight: 600;
+#game-info p span.value {
+    font-size: 1.8em;
+    font-weight: 800;
+    background: linear-gradient(135deg, #1e293b, #334155);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#current-turn span.value {
+    background: linear-gradient(135deg, #059669, #047857);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+#move-count span.value {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+.stone-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.stone-icon.black {
+    background: linear-gradient(135deg, #1f2937, #000000);
+}
+
+.stone-icon.white {
+    background: linear-gradient(135deg, #ffffff, #f3f4f6);
+    border-color: rgba(0, 0, 0, 0.3);
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
 }
 
 canvas {
     background-color: #e3b266;
-    border: 3px solid #8B4513;
-    border-radius: 10px;
+    border: 4px solid #8B4513;
+    border-radius: 12px;
     cursor: pointer;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    transition: transform 0.2s ease;
+    box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.25),
+        0 8px 16px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+    position: relative;
 }
 
 canvas:hover {
-    transform: scale(1.02);
+    transform: translateY(-2px);
+    box-shadow: 
+        0 25px 50px rgba(0, 0, 0, 0.3),
+        0 12px 20px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 /* 모달 스타일 */
@@ -199,7 +288,21 @@ canvas:hover {
 }
 
 /* 반응형 디자인 */
-@media (max-width: 600px) {
+@media (max-width: 800px) {
+    #game-info {
+        min-width: 90%;
+        padding: 16px 20px;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    #game-info p {
+        flex-direction: row;
+        justify-content: space-between;
+        width: 100%;
+        padding: 8px 0;
+    }
+    
     .modal-content {
         width: 90%;
         margin: 20% auto;
