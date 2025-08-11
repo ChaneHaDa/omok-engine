@@ -2,8 +2,9 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
     flex-direction: column;
+    justify-content: center;
     align-items: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: white;
     margin: 0;
     min-height: 100vh;
     color: #333;
@@ -12,19 +13,20 @@ body {
 h1 {
     margin-top: 20px;
     margin-bottom: 20px;
-    color: white;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    color: #333;
+    text-shadow: none;
     font-size: 2.5em;
     font-weight: 300;
 }
 
 #game-info {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(245, 245, 245, 0.9);
     padding: 15px 25px;
     border-radius: 10px;
     margin-bottom: 20px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     text-align: center;
+    border: 1px solid #e0e0e0;
 }
 
 #game-info p {
