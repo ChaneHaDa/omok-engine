@@ -1,81 +1,77 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from game import OmokGame
 from schemas import WsIn, WsOut
-from services.bot import RandomBot
+from services.game_service import GameService
 
 
 router = APIRouter()
 
 
-@router.websocket('/ws')
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-
-    player_color = None  # 'black' or 'white'
-    game = OmokGame()
-    bot = RandomBot()
-
-    async def send_state(message: str, *, player_color_field=None, bot_move=None, error=None):
+async def send_game_state(websocket: WebSocket, game_service: GameService, message: str, *, bot_move=None, error=None):
+    try:
+        game_state = game_service.get_game_state()
         await websocket.send_json(
             WsOut.game_state(
                 message=message,
-                board=game.board,
-                move_numbers=game.move_numbers,
-                current_turn=game.current_turn,
-                move_count=game.move_count,
-                player_color=player_color_field,
+                board=game_state.get('board', []),
+                move_numbers=game_state.get('move_numbers', []),
+                current_turn=game_state.get('current_turn'),
+                move_count=game_state.get('move_count', 0),
+                player_color=game_state.get('player_color'),
                 bot_move=bot_move,
                 error=error,
             )
         )
+    except WebSocketDisconnect:
+        return
 
-    async def bot_move_turn():
-        choice = bot.choose_move(game.board)
-        if choice is None:
-            await send_state('Board full')
-            return
-        x, y = choice
-        message = game.place_stone(x, y)
-        await send_state('Bot moved' if 'wins' not in message else message, bot_move={'x': x, 'y': y})
 
-    while True:
-        data = await websocket.receive_json()
-        payload = WsIn(data)
+@router.websocket('/ws')
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    
+    game_service = GameService()
+    
+    # 연결 시 자동으로 새 게임 시작
+    message, _ = game_service.start_new_game()
+    await send_game_state(websocket, game_service, message)
+    
+    # 봇이 선공이면 첫 수를 둠
+    if game_service.is_bot_turn():
+        bot_message, bot_move = game_service.place_bot_stone()
+        await send_game_state(websocket, game_service, bot_message, bot_move=bot_move)
 
-        if payload.action == 'new_game':
-            game = OmokGame()
-            # 흑/백 랜덤 배정
-            import random as _random
-            player_color = _random.choice(['black', 'white'])
-            await send_state('New game started', player_color_field=player_color)
-            # 봇 선공이면 즉시 수
-            if player_color != game.current_turn:
-                await bot_move_turn()
-            continue
+    async def send_state(message: str, *, bot_move=None, error=None):
+        await send_game_state(websocket, game_service, message, bot_move=bot_move, error=error)
 
-        # 좌표 메시지 유효성 검사
-        if payload.x is None or payload.y is None:
-            await send_state("Missing required keys: 'x' and 'y'", error="Missing required keys: 'x' and 'y'")
-            continue
+    try:
+        while True:
+            data = await websocket.receive_json()
+            payload = WsIn(data)
 
-        x, y = payload.x, payload.y
-        if not isinstance(x, int) or not isinstance(y, int):
-            await send_state('Coordinates must be integers', error='Coordinates must be integers')
-            continue
-        if x < 0 or x >= 19 or y < 0 or y >= 19:
-            await send_state('Coordinates out of range (0-18)', error='Coordinates out of range (0-18)')
-            continue
-        if player_color is not None and game.current_turn != player_color:
-            await send_state('Not your turn', error='Not your turn')
-            continue
+            if payload.action == 'new_game':
+                message, _ = game_service.start_new_game()
+                await send_state(message)
+                
+                if game_service.is_bot_turn():
+                    bot_message, bot_move = game_service.place_bot_stone()
+                    await send_state(bot_message, bot_move=bot_move)
+                continue
 
-        message = game.place_stone(x, y)
-        await send_state(message)
+            error_message = game_service.validate_move(payload.x, payload.y)
+            if error_message:
+                await send_state(error_message, error=error_message)
+                continue
 
-        if message == 'Stone placed':
-            await bot_move_turn()
+            message = game_service.place_player_stone(payload.x, payload.y)
+            await send_state(message)
+
+            if message == 'Stone placed':
+                bot_message, bot_move = game_service.place_bot_stone()
+                await send_state(bot_message, bot_move=bot_move)
+    except WebSocketDisconnect:
+        pass
 
 
